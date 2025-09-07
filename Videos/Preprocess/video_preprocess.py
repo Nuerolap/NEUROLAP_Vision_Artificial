@@ -1,59 +1,85 @@
 import cv2
 import os
 
+# =========================
 # Parámetros configurables
-TARGET_RESOLUTION = (640, 360)  # ancho, alto
-TARGET_FPS = 15                 # FPS reducido para salida
+# =========================
+TARGET_FPS = 10
+TARGET_RESOLUTION = (640, 360)   # (ancho, alto) → 360p
+CODEC = "mp4v"                   # "mp4v" → mp4, "XVID" → avi
 
-def preprocess_video(input_path, output_path, resolution=TARGET_RESOLUTION, target_fps=TARGET_FPS):
+# =========================
+# Función principal
+# =========================
+def convert_video(input_path, output_path, target_fps=TARGET_FPS,
+                  resolution=TARGET_RESOLUTION, codec=CODEC):
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
-        print(f"❌ Error: no se pudo abrir {input_path}")
-        return
+        raise RuntimeError(f"❌ No se pudo abrir el video: {input_path}")
 
-    # FPS original y cálculo de skip_rate
-    original_fps = cap.get(cv2.CAP_PROP_FPS) or 25
-    skip_rate = max(int(original_fps // target_fps), 1)
-
-    width, height = resolution
-    # Usar codec XVID y mantener FPS original
-    fourcc = cv2.VideoWriter_fourcc(*"XVID")
-    out = cv2.VideoWriter(output_path, fourcc, original_fps, (width, height))
-
+    # Propiedades del video original
+    orig_fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(f"📹 Procesando '{input_path}'")
-    print(f"   Resolución: {width}x{height} | FPS original: {original_fps:.1f} → salida: {target_fps}")
-    print(f"   Total frames en video: {total_frames}")
+    width_in  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height_in = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    frame_idx, saved_idx = 0, 0
+    if not orig_fps or orig_fps <= 0:
+        orig_fps = 30.0  # fallback si OpenCV no detecta FPS
+
+    print(f"📹 FPS original: {orig_fps:.2f} | Objetivo: {target_fps} fps")
+    print(f"   Resolución entrada: {width_in}x{height_in} → salida: {resolution[0]}x{resolution[1]}")
+    print(f"   Total de frames: {total_frames}")
+
+    # Configurar salida
+    fourcc = cv2.VideoWriter_fourcc(*codec)
+    out = cv2.VideoWriter(output_path, fourcc, float(target_fps), resolution)
+    if not out.isOpened():
+        cap.release()
+        raise RuntimeError(f"❌ No se pudo crear el archivo de salida: {output_path}")
+
+    # Algoritmo de resampleo temporal
+    ratio = float(target_fps) / float(orig_fps)
+    accum = 0.0
+    in_idx, out_count = 0, 0
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Saltar frames para reducir FPS
-        if frame_idx % skip_rate != 0:
-            frame_idx += 1
-            continue
+        accum += ratio
+        while accum >= 1.0:
+            # Redimensionar si es necesario
+            if (frame.shape[1], frame.shape[0]) != resolution:
+                frame_resized = cv2.resize(frame, resolution)
+            else:
+                frame_resized = frame
 
-        # Redimensionar frame
-        frame = cv2.resize(frame, resolution)
+            out.write(frame_resized)
+            out_count += 1
+            accum -= 1.0
 
-        # Guardar frame procesado
-        out.write(frame)
-        saved_idx += 1
-        frame_idx += 1
+        in_idx += 1
 
     cap.release()
     out.release()
-    print(f"✅ Guardado en '{output_path}' ({saved_idx} frames procesados)")
 
+    # Reporte final
+    dur_in  = total_frames / orig_fps
+    dur_out = out_count / target_fps
+    print(f"✅ Guardado en: {output_path}")
+    print(f"   Frames escritos: {out_count}")
+    print(f"   Duración original ≈ {dur_in:.2f}s | salida ≈ {dur_out:.2f}s")
+
+
+# =========================
+# Ejecución
+# =========================
 if __name__ == "__main__":
     BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    INPUT_VIDEO = os.path.join(BASE_PATH, "training-videos", "IMG_8217.MOV")
-    OUTPUT_VIDEO = os.path.join(BASE_PATH, "processed-videos", "processed3.mp4")
+    INPUT_VIDEO  = os.path.join(BASE_PATH, "training-videos", "IMG_8309.MOV")
+    OUTPUT_VIDEO = os.path.join(BASE_PATH, "processed-videos", "processed3_10fps.mp4")
 
     os.makedirs(os.path.dirname(OUTPUT_VIDEO), exist_ok=True)
 
-    preprocess_video(INPUT_VIDEO, OUTPUT_VIDEO)
+    convert_video(INPUT_VIDEO, OUTPUT_VIDEO)
