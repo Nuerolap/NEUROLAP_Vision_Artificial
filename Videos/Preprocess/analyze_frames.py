@@ -3,7 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-def analyze_first_frame(video_path):
+def analyze_first_frame(video_path, save=True, show=False):
     cap = cv2.VideoCapture(video_path)
     ret, frame = cap.read()
     cap.release()
@@ -33,13 +33,12 @@ def analyze_first_frame(video_path):
     plt.title("Primer frame (RGB)")
     plt.axis("off")
 
-    # Histogramas RGB
+    # Histogramas RGB (usar la imagen rgb)
     plt.subplot(2, 3, 2)
-    colors = ("r", "g", "b")
-    for i, col in enumerate(colors):
-        hist = cv2.calcHist([frame], [i], None, [256], [0, 256])
+    for i, col in enumerate(("r","g","b")):
+        hist = cv2.calcHist([rgb], [i], None, [256], [0, 256])
         plt.plot(hist, color=col)
-        plt.xlim([0, 256])
+    plt.xlim([0,256])
     plt.title("Histograma RGB")
     plt.xlabel("Intensidad")
     plt.ylabel("Frecuencia")
@@ -81,12 +80,21 @@ def analyze_first_frame(video_path):
     plt.ylabel("S (Saturación)")
     plt.colorbar(label="Densidad")
 
+    
     plt.tight_layout()
-    plt.show()
+    if save:
+        out_dir = os.path.join(os.path.dirname(__file__), "..", "reports")
+        out_dir = os.path.abspath(out_dir)
+        os.makedirs(out_dir, exist_ok=True)
+        fname = f"{os.path.splitext(os.path.basename(video_path))[0]}_diagnostic.png"
+        plt.savefig(os.path.join(out_dir, fname), dpi=150)
+    if show:
+        plt.show()
+    plt.close()
 
 
 if __name__ == "__main__":
     BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    INPUT_VIDEO = os.path.join(BASE_PATH, "training-videos", "IMG_8234.MOV")
+    INPUT_VIDEO = os.path.join(BASE_PATH, "training-videos", "IMG_8309.MOV")
 
-    analyze_first_frame(INPUT_VIDEO)
+    analyze_first_frame(INPUT_VIDEO, save=True, show=False)
