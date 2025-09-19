@@ -1,0 +1,23 @@
+# Procesamiento de imágenes y video
+opencv-python>=4.8.0
+opencv-python-headless>=4.8.0  # útil si corres en servidor sin entorno gráfico
+
+# NumPy y análisis numérico
+numpy>=1.24.0
+
+# Visualización
+matplotlib>=3.7.0
+
+# Barra de progreso (para frame_split.py de prepro)
+tqdm>=4.66.0
+
+# Mediapipe (para extracción de keypoints de mano)
+mediapipe>=0.10.0
+
+# Para manejo de JSON y utilidades varias (ya incluido en stdlib, pero por si acaso)
+jsonschema>=4.17.0
+
+# Para entrenamiento posterior (opcional, pero recomendado desde ya)
+scikit-learn>=1.3.0
+joblib>=1.3.0
+pandas>=2.1.0
