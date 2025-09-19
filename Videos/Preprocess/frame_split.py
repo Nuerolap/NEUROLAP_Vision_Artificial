@@ -6,7 +6,9 @@ from tqdm import tqdm
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Rutas relativas
-VIDEOS_FOLDER = os.path.join(BASE_PATH, "training-videos")
+# Rutas relativas
+# VIDEOS_FOLDER = os.path.join(BASE_PATH, "training-videos")
+VIDEOS_FOLDER = os.path.join(BASE_PATH, "processed-videos")  # <- usar procesados
 FRAMES_FOLDER = os.path.join(BASE_PATH, "video-frames")
 
 # Máximo de FPS a extraer (para evitar miles de frames innecesarios en webcams)

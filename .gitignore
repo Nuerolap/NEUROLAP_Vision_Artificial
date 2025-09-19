@@ -1,1 +1,9 @@
 /venv/
+.venv
+training-videos/
+reports
+labels
+processed-videos/
+datasets/
+__pycache__/
+VID
