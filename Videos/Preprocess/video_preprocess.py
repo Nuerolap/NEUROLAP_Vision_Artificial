@@ -4,7 +4,7 @@ import os
 # =========================
 # Parámetros configurables
 # =========================
-TARGET_FPS = 10
+TARGET_FPS = 15
 TARGET_RESOLUTION = (640, 360)   # (ancho, alto) → 360p
 CODEC = "mp4v"                   # "mp4v" → mp4, "XVID" → avi
 
@@ -78,7 +78,7 @@ def convert_video(input_path, output_path, target_fps=TARGET_FPS,
 if __name__ == "__main__":
     BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     INPUT_VIDEO  = os.path.join(BASE_PATH, "training-videos", "IMG_8309.MOV")
-    OUTPUT_VIDEO = os.path.join(BASE_PATH, "processed-videos", "processed3_10fps.mp4")
+    OUTPUT_VIDEO = os.path.join(BASE_PATH, "processed-videos", "proc3_15fps.mp4")
 
     os.makedirs(os.path.dirname(OUTPUT_VIDEO), exist_ok=True)
 
