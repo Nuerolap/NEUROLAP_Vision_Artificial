@@ -12,11 +12,11 @@ from typing import List, Tuple
 DEF_TARGET_FPS = 15
 DEF_RESOLUTION = (640, 360)   # (w, h)
 DEF_CODEC = "mp4v"
-DEF_OVERWRITE = False
-DEF_LABELS = ["rojo", "amarillo", "verde"]  # puedes cambiar/añadir
+DEF_LABELS = ["rojo", "amarillo", "verde"]  # subcarpetas con tus videos
 
 VALID_EXTS = (".mp4", ".mov", ".mkv", ".avi")
 
+# ---------- helpers de resize ----------
 def resize_letterbox(frame, target=(640, 360)):
     tw, th = target
     h, w = frame.shape[:2]
@@ -29,16 +29,33 @@ def resize_letterbox(frame, target=(640, 360)):
     canvas[y0:y0 + nh, x0:x0 + nw] = resized
     return canvas
 
+def resize_stretch(frame, target=(640, 360)):
+    # "modo nuevo": redimensiona directo a la resolución (puede deformar)
+    return cv2.resize(frame, target, interpolation=cv2.INTER_AREA)
+
 def normalize_video_id(basename_noext: str) -> str:
-    """
-    ID normalizado para empatar en pipeline: usamos el nombre de salida sin extensión.
-    """
+    # usamos id normalizado consistente con el resto del pipeline
     return f"{basename_noext}_15fps"
 
-def convert_video(input_path: str, output_path: str,
-                  target_fps=DEF_TARGET_FPS,
-                  resolution=DEF_RESOLUTION,
-                  codec=DEF_CODEC) -> dict:
+def collect_labeled_videos(in_dir: str, labels: List[str]) -> List[Tuple[str, str]]:
+    pairs = []
+    for lab in labels:
+        lab_dir = os.path.join(in_dir, lab)
+        if not os.path.isdir(lab_dir):
+            continue
+        for f in os.listdir(lab_dir):
+            if f.lower().endswith(VALID_EXTS):
+                pairs.append((os.path.join(lab_dir, f), lab))
+    return pairs
+
+def convert_video(
+    input_path: str,
+    output_path: str,
+    target_fps=DEF_TARGET_FPS,
+    resolution=DEF_RESOLUTION,
+    codec=DEF_CODEC,
+    resize_mode: str = "letterbox"  # "letterbox" | "stretch"
+) -> dict:
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
         raise RuntimeError(f"No se pudo abrir el video: {input_path}")
@@ -48,7 +65,7 @@ def convert_video(input_path: str, output_path: str,
     in_w  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     in_h  = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     if not in_fps or in_fps <= 0:
-        in_fps = 30.0  # fallback
+        in_fps = 30.0
 
     print(f"➡️ {os.path.basename(input_path)} | FPS in {in_fps:.2f} → out {target_fps} | "
           f"{in_w}x{in_h} → {resolution[0]}x{resolution[1]} | frames in {in_frames}")
@@ -59,9 +76,16 @@ def convert_video(input_path: str, output_path: str,
         cap.release()
         raise RuntimeError(f"No se pudo crear el archivo de salida: {output_path}")
 
+    # acumulador temporal (igual que el código "nuevo")
     ratio = float(target_fps) / float(in_fps)
     accum = 0.0
     out_count = 0
+
+    # selector de resize
+    if resize_mode == "stretch":
+        do_resize = lambda fr: resize_stretch(fr, resolution)
+    else:
+        do_resize = lambda fr: resize_letterbox(fr, resolution)
 
     while True:
         ret, frame = cap.read()
@@ -69,7 +93,7 @@ def convert_video(input_path: str, output_path: str,
             break
         accum += ratio
         while accum >= 1.0:
-            out.write(resize_letterbox(frame, resolution))
+            out.write(do_resize(frame))
             out_count += 1
             accum -= 1.0
 
@@ -87,28 +111,17 @@ def convert_video(input_path: str, output_path: str,
         "dur_in_s": dur_in, "dur_out_s": dur_out,
     }
 
-def collect_labeled_videos(in_dir: str, labels: List[str]) -> List[Tuple[str, str]]:
-    """
-    Devuelve lista de (ruta_video, label). Solo dentro de subcarpetas cuyo nombre sea un label.
-    """
-    pairs = []
-    for lab in labels:
-        lab_dir = os.path.join(in_dir, lab)
-        if not os.path.isdir(lab_dir):
-            continue
-        for f in os.listdir(lab_dir):
-            if f.lower().endswith(VALID_EXTS):
-                pairs.append((os.path.join(lab_dir, f), lab))
-    return pairs
-
 def main():
-    parser = argparse.ArgumentParser(description="Preprocess (letterbox + fps) con estructura por labels")
+    parser = argparse.ArgumentParser(description="Preprocess (fps + resize) con estructura por labels rojo/amarillo/verde")
     parser.add_argument("--input",  default=None, help="Carpeta de entrada (por defecto training-videos)")
     parser.add_argument("--output", default=None, help="Carpeta de salida (por defecto processed-videos)")
     parser.add_argument("--labels", nargs="*", default=DEF_LABELS, help="Lista de labels (subcarpetas)")
     parser.add_argument("--fps",    type=float, default=DEF_TARGET_FPS, help="FPS objetivo")
     parser.add_argument("--width",  type=int,   default=DEF_RESOLUTION[0], help="Ancho objetivo")
     parser.add_argument("--height", type=int,   default=DEF_RESOLUTION[1], help="Alto objetivo")
+    parser.add_argument("--codec",  default=DEF_CODEC, help="Codec: mp4v/XVID/…")
+    parser.add_argument("--resize_mode", choices=["letterbox","stretch"], default="letterbox",
+                        help="letterbox (mantiene aspecto) o stretch (como el código nuevo)")
     parser.add_argument("--overwrite", action="store_true", help="Reescribir salidas existentes")
     args = parser.parse_args()
 
@@ -129,7 +142,7 @@ def main():
         print("⚠️  No se encontraron videos en subcarpetas:", args.labels, "dentro de", in_dir)
         return
 
-    # Para escribir labels_from_manifest.csv sin duplicar, iremos acumulando aquí
+    # acumularemos aquí para generar labels_from_manifest.csv
     label_rows = []
 
     with open(manifest_path, "a", newline="", encoding="utf-8") as f:
@@ -139,24 +152,21 @@ def main():
                 "ts","label","in_file","out_file","video_id_norm",
                 "in_fps","in_frames","in_w","in_h",
                 "out_fps","out_frames","out_w","out_h",
-                "dur_in_s","dur_out_s","status","error"
+                "dur_in_s","dur_out_s","mode","status","error"
             ])
 
         for in_path, lab in videos:
             base_noext = os.path.splitext(os.path.basename(in_path))[0]
             out_name   = f"{base_noext}_15fps.mp4"
-            # salida en carpeta por label
             lab_out_dir = os.path.join(out_dir, lab)
             os.makedirs(lab_out_dir, exist_ok=True)
             out_path = os.path.join(lab_out_dir, out_name)
-
             vid_norm = normalize_video_id(base_noext)
 
             if (not args.overwrite) and os.path.exists(out_path):
                 print(f"⏭️  Saltando (ya existe): {lab}/{out_name}")
                 w.writerow([datetime.now().isoformat(), lab, in_path, out_path, vid_norm,
-                            "", "", "", "", "", "", "", "", "", "", "skipped_exists", ""])
-                # también añadimos al mapping label
+                            "", "", "", "", "", "", "", "", "", "", args.resize_mode, "skipped_exists", ""])
                 label_rows.append([vid_norm, lab])
                 continue
 
@@ -164,22 +174,22 @@ def main():
                 meta = convert_video(
                     in_path, out_path,
                     target_fps=args.fps,
-                    resolution=(args.width, args.height)
+                    resolution=(args.width, args.height),
+                    codec=args.codec,
+                    resize_mode=args.resize_mode
                 )
                 w.writerow([datetime.now().isoformat(), lab, in_path, out_path, vid_norm,
                             f"{meta['in_fps']:.4f}", meta["in_frames"], meta["in_w"], meta["in_h"],
                             f"{meta['out_fps']:.4f}", meta["out_frames"], meta["out_w"], meta["out_h"],
-                            f"{meta['dur_in_s']:.3f}", f"{meta['dur_out_s']:.3f}", "ok", ""])
+                            f"{meta['dur_in_s']:.3f}", f"{meta['dur_out_s']:.3f}",
+                            args.resize_mode, "ok", ""])
                 label_rows.append([vid_norm, lab])
             except Exception as e:
                 print(f"❌ Error con {in_path}: {e}")
                 w.writerow([datetime.now().isoformat(), lab, in_path, out_path, vid_norm,
-                            "", "", "", "", "", "", "", "", "", "", "error", str(e)])
+                            "", "", "", "", "", "", "", "", "", "", args.resize_mode, "error", str(e)])
 
-    # Generar labels_from_manifest.csv (video_id_norm, label)
-    # Evitar duplicados manteniendo el último visto
     if label_rows:
-        # deduplicar por video_id_norm (simple dict)
         dedup = {}
         for vid_norm, lab in label_rows:
             dedup[vid_norm] = lab

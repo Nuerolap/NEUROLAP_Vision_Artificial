@@ -23,29 +23,37 @@ emb["cluster"] = km.fit_predict(Z)
 sil = silhouette_score(Z, emb["cluster"])
 print(f"[KMEANS] k={k} | silhouette={sil:.3f}")
 
-# ------------- asignar nombres R/A/V (heurístico)
-# Ordena clusters por reconstr. error promedio si lo tuvieras; como no está,
-# usa densidad (inercia por cluster) o tamaño. Aquí usaremos tamaño como ejemplo:
+# ------------- asignar nombres R/A/V (heurístico por tamaño)
 sizes = emb.groupby("cluster").size().sort_values(ascending=False).index.tolist()
-# mayor tamaño -> asumimos "verde" (más común), luego "amarillo", luego "rojo"
 cluster_to_rag = {sizes[0]:"verde", sizes[1]:"amarillo", sizes[2]:"rojo"}
 emb["rag_cluster"] = emb["cluster"].map(cluster_to_rag)
 
-# ------------- resumen por video/hand -------------
-agg = emb.groupby(["video_id","hand"])["rag_cluster"].agg(lambda s: s.value_counts().idxmax()).reset_index()
+# ------------- resumen por video/hand (moda de R/A/V por mano)
+agg = emb.groupby(["video_id","hand"])["rag_cluster"] \
+         .agg(lambda s: s.value_counts().idxmax()).reset_index()
 pivot = agg.pivot(index="video_id", columns="hand", values="rag_cluster").reset_index()
 pivot.columns.name = None
 
+# ------------- proporciones por cluster por video (robusto, sin choque de 'video_id')
+props_series = emb.groupby(["video_id", "cluster"]).size()
+props_norm   = props_series.groupby(level=0).apply(lambda s: s / s.sum())
+props_w = props_norm.unstack(fill_value=0.0)  # index=video_id, cols=cluster
+props_w.columns = [f"prop_c{int(c)}" for c in props_w.columns]
+props_w = props_w.copy()
+props_w["video_id"] = props_w.index      # <- NO reset_index(names="video_id")
+props_w = props_w.reset_index(drop=True) # <- no intenta insertar otra 'video_id'
+
 # ------------- combina con miss% del manifest -------------
 man = pd.read_csv(MANIFEST)
+# Manifest trae 'video' como nombre de archivo con _15fps.mp4
 man["video_id"] = man["video"].str.replace("_15fps.mp4","", regex=False)
-man["video_csv"] = man["csv_path"]
 
-# mapea miss% por mano a df de resumen
-miss = man[["video","miss_left_pct","miss_right_pct","csv_path"]].copy()
-miss["video_id"] = miss["video"].str.replace("_15fps.mp4","", regex=False)
+miss = man[["video","miss_left_pct","miss_right_pct","csv_path","video_id"]].copy()
 
-res = pivot.merge(miss, on="video_id", how="left")
+# Merge de todo: moda por mano + proporciones de clusters + métricas de miss
+res = pivot.merge(props_w, on="video_id", how="left") \
+           .merge(miss, on="video_id", how="left")
+
 out_csv = os.path.join(OUT_DIR, "kmeans_video_summary.csv")
 res.to_csv(out_csv, index=False)
 print(f"[OK] resumen por video -> {os.path.relpath(out_csv, BASE_PATH)}")
