@@ -6,7 +6,7 @@ import numpy as np
 # Parámetros configurables
 # =========================
 TARGET_FPS = 15
-TARGET_RESOLUTION = (640, 360)   # (ancho, alto) → 360p letterboxed
+TARGET_RESOLUTION = (640, 360)   # (ancho, alto) → 360p
 CODEC = "mp4v"                   # "mp4v" → mp4, "XVID" → avi
 OVERWRITE = False                # True para reescribir salidas existentes
 
@@ -71,23 +71,9 @@ def convert_video(input_path, output_path, target_fps=TARGET_FPS,
 
 if __name__ == "__main__":
     BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    input_folder  = os.path.join(BASE_PATH, "training-videos")
-    output_folder = os.path.join(BASE_PATH, "processed-videos")
-    os.makedirs(output_folder, exist_ok=True)
+    INPUT_VIDEO  = os.path.join(BASE_PATH, "training-videos", "IMG_8309.MOV")
+    OUTPUT_VIDEO = os.path.join(BASE_PATH, "processed-videos", "proc3_15fps.mp4")
 
-    videos = [f for f in os.listdir(input_folder)
-              if f.lower().endswith((".mp4", ".mov", ".avi", ".mkv"))]
+    os.makedirs(os.path.dirname(OUTPUT_VIDEO), exist_ok=True)
 
-    if not videos:
-        print("⚠️ No se encontraron videos en training-videos/")
-    for file in videos:
-        in_path  = os.path.join(input_folder, file)
-        out_name = f"{os.path.splitext(file)[0]}_15fps.mp4"
-        out_path = os.path.join(output_folder, out_name)
-
-        if (not OVERWRITE) and os.path.exists(out_path):
-            print(f"⏭️  Saltando (ya existe): {out_name}")
-            continue
-
-        print(f"➡️ Procesando: {file}")
-        convert_video(in_path, out_path)
+    convert_video(INPUT_VIDEO, OUTPUT_VIDEO)

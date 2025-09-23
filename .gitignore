@@ -1,3 +1,5 @@
+/Videos/processed-videos/
+/Videos/training-videos/
 /venv/
 .venv
 training-videos/
@@ -6,4 +8,3 @@ labels
 processed-videos/
 datasets/
 __pycache__/
-VID
