@@ -8,7 +8,8 @@ from typing import List, Tuple
 # =========================
 # Config
 # =========================
-FILTER_15FPS = True          # True: solo procesa *_15fps.mp4
+FILTER_15FPS = False
+         # True: solo procesa *_15fps.mp4
 WRITE_ALL_FRAMES = True      # siempre escribe Left y Right por frame (con mask=0 si no hay mano)
 OUTPUT_DIR_NAME = os.path.join("datasets", "kp_v1")
 VALID_EXTS = (".mp4", ".mov", ".mkv", ".avi")

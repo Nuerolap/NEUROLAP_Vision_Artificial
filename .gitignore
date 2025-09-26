@@ -8,3 +8,4 @@ labels
 processed-videos/
 datasets/
 __pycache__/
+augmented-videos/

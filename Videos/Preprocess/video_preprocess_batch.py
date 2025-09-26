@@ -54,7 +54,7 @@ def convert_video(
     target_fps=DEF_TARGET_FPS,
     resolution=DEF_RESOLUTION,
     codec=DEF_CODEC,
-    resize_mode: str = "letterbox"  # "letterbox" | "stretch"
+    resize_mode: str = "letterbox"  # "letterbox" | ""
 ) -> dict:
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
