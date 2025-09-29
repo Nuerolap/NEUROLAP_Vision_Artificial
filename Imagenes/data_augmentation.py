@@ -29,9 +29,9 @@ if img is None:
     raise ValueError("No se pudo leer la imagen. Verifica formato y ruta.")
 
 # Rotaciones de la imagen original
-rot90 = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-rot180 = cv2.rotate(img, cv2.ROTATE_180)
-rot270 = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+# rot90 = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+# rot180 = cv2.rotate(img, cv2.ROTATE_180)
+# rot270 = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
 # Kernel morfológico
 kernel = np.ones((3, 3), np.uint8)
@@ -45,47 +45,47 @@ dilatacion = cv2.dilate(binary, kernel, iterations=1)
 blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
 # Rotaciones de dilatación
-dilat_rot90 = cv2.rotate(dilatacion, cv2.ROTATE_90_CLOCKWISE)
-dilat_rot180 = cv2.rotate(dilatacion, cv2.ROTATE_180)
-dilat_rot270 = cv2.rotate(dilatacion, cv2.ROTATE_90_COUNTERCLOCKWISE)
+# dilat_rot90 = cv2.rotate(dilatacion, cv2.ROTATE_90_CLOCKWISE)
+# dilat_rot180 = cv2.rotate(dilatacion, cv2.ROTATE_180)
+# dilat_rot270 = cv2.rotate(dilatacion, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
 # Rotaciones de blur
-blur_rot90 = cv2.rotate(blur, cv2.ROTATE_90_CLOCKWISE)
-blur_rot180 = cv2.rotate(blur, cv2.ROTATE_180)
-blur_rot270 = cv2.rotate(blur, cv2.ROTATE_90_COUNTERCLOCKWISE)
+# blur_rot90 = cv2.rotate(blur, cv2.ROTATE_90_CLOCKWISE)
+# blur_rot180 = cv2.rotate(blur, cv2.ROTATE_180)
+# blur_rot270 = cv2.rotate(blur, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
 # Guardado de imágenes
 base_name = os.path.splitext(selected_image)[0]
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_rot90.jpg"), rot90)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_rot180.jpg"), rot180)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_rot270.jpg"), rot270)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_rot90.jpg"), rot90)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_rot180.jpg"), rot180)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_rot270.jpg"), rot270)
 
 cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilatacion.jpg"), dilatacion)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilat_rot90.jpg"), dilat_rot90)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilat_rot180.jpg"), dilat_rot180)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilat_rot270.jpg"), dilat_rot270)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilat_rot90.jpg"), dilat_rot90)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilat_rot180.jpg"), dilat_rot180)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_dilat_rot270.jpg"), dilat_rot270)
 
 cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur.jpg"), blur)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur_rot90.jpg"), blur_rot90)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur_rot180.jpg"), blur_rot180)
-cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur_rot270.jpg"), blur_rot270)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur_rot90.jpg"), blur_rot90)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur_rot180.jpg"), blur_rot180)
+# cv2.imwrite(os.path.join(output_folder, f"{base_name}_blur_rot270.jpg"), blur_rot270)
 
 print("Data augmentation completado. Imágenes guardadas en 'output_augmented'.")
 
 # Lista para el plot
 generated_images = [
     ("original", img_path),
-    ("rot90", os.path.join(output_folder, f"{base_name}_rot90.jpg")),
-    ("rot180", os.path.join(output_folder, f"{base_name}_rot180.jpg")),
-    ("rot270", os.path.join(output_folder, f"{base_name}_rot270.jpg")),
+    # ("rot90", os.path.join(output_folder, f"{base_name}_rot90.jpg")),
+    # ("rot180", os.path.join(output_folder, f"{base_name}_rot180.jpg")),
+    # ("rot270", os.path.join(output_folder, f"{base_name}_rot270.jpg")),
     ("dilatacion", os.path.join(output_folder, f"{base_name}_dilatacion.jpg")),
-    ("dilat_rot90", os.path.join(output_folder, f"{base_name}_dilat_rot90.jpg")),
-    ("dilat_rot180", os.path.join(output_folder, f"{base_name}_dilat_rot180.jpg")),
-    ("dilat_rot270", os.path.join(output_folder, f"{base_name}_dilat_rot270.jpg")),
+    # ("dilat_rot90", os.path.join(output_folder, f"{base_name}_dilat_rot90.jpg")),
+    # ("dilat_rot180", os.path.join(output_folder, f"{base_name}_dilat_rot180.jpg")),
+    # ("dilat_rot270", os.path.join(output_folder, f"{base_name}_dilat_rot270.jpg")),
     ("blur", os.path.join(output_folder, f"{base_name}_blur.jpg")),
-    ("blur_rot90", os.path.join(output_folder, f"{base_name}_blur_rot90.jpg")),
-    ("blur_rot180", os.path.join(output_folder, f"{base_name}_blur_rot180.jpg")),
-    ("blur_rot270", os.path.join(output_folder, f"{base_name}_blur_rot270.jpg")),
+    # ("blur_rot90", os.path.join(output_folder, f"{base_name}_blur_rot90.jpg")),
+    # ("blur_rot180", os.path.join(output_folder, f"{base_name}_blur_rot180.jpg")),
+    # ("blur_rot270", os.path.join(output_folder, f"{base_name}_blur_rot270.jpg")),
 ]
 
 # Plot dinámico (ajusta filas/columnas según cantidad)
