@@ -1,8 +1,4 @@
 import os
-import shutil
-import random
-import cv2
-from PIL import Image
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,29 +6,24 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import models, transforms, datasets
 
 # =============================
-# 1. Configuración
+# Configuración
 # =============================
-data_dir = "data"   # carpeta original con VERDE, ROJO, AMARILLO
-train_ratio = 0.8   # 80% train / 20% val
+data_dir = "processed_data"   # imágenes ya preprocesadas y augmentadas
+train_ratio = 0.8
 batch_size = 8
 epochs = 10
 
 # =============================
-# 2. Transformaciones
+# Transformaciones
 # =============================
 transform = transforms.Compose([
-    transforms.Resize((512, 512)),
     transforms.ToTensor(),
     transforms.Normalize([0.5]*3, [0.5]*3)
 ])
 
-# =============================
-# 3. Cargar dataset y dividirlo
-# =============================
-# Dataset completo
+# Dataset
 full_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
 
-# División train/val
 train_size = int(train_ratio * len(full_dataset))
 val_size = len(full_dataset) - train_size
 train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
@@ -44,7 +35,7 @@ print("Clases detectadas:", full_dataset.classes)
 print(f"Total imágenes: {len(full_dataset)} → Train: {len(train_dataset)}, Val: {len(val_dataset)}")
 
 # =============================
-# 4. Modelo DenseNet para clasificación
+# Modelo DenseNet
 # =============================
 def get_model(num_classes=3):
     model = models.densenet121(pretrained=True)
@@ -53,7 +44,7 @@ def get_model(num_classes=3):
         nn.Linear(num_ftrs, 512),
         nn.ReLU(),
         nn.Dropout(0.3),
-        nn.Linear(512, num_classes)  # 3 clases
+        nn.Linear(512, num_classes)
     )
     return model
 
@@ -62,12 +53,12 @@ device = torch.device("mps" if torch.backends.mps.is_available() else
 
 model = get_model(num_classes=3).to(device)
 
-# =============================
-# 5. Entrenamiento
-# =============================
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+# =============================
+# Entrenamiento
+# =============================
 def train_model(model, train_loader, val_loader, epochs=10):
     for epoch in range(epochs):
         model.train()
@@ -100,8 +91,9 @@ def train_model(model, train_loader, val_loader, epochs=10):
     return model
 
 # =============================
-# 6. Ejecutar entrenamiento
+# Main
 # =============================
-model = train_model(model, train_loader, val_loader, epochs=epochs)
-torch.save(model.state_dict(), "rcft_classifier.pth")
-print("Modelo guardado como rcft_classifier.pth")
+if __name__ == "__main__":
+    model = train_model(model, train_loader, val_loader, epochs=epochs)
+    torch.save(model.state_dict(), "rcft_classifier.pth")
+    print("Modelo guardado como rcft_classifier.pth")
