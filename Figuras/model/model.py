@@ -1,99 +1,79 @@
 import os
+import shutil
+import random
 import cv2
-import numpy as np
 from PIL import Image
-from sklearn.metrics import mean_absolute_error, r2_score
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torchvision import models, transforms
+from torch.utils.data import DataLoader, random_split
+from torchvision import models, transforms, datasets
 
 # =============================
-# 1. Dataset y Preprocesamiento
+# 1. Configuración
 # =============================
-
-class RCFTDataset(Dataset):
-    def __init__(self, image_paths, labels, transform=None):
-        self.image_paths = image_paths
-        self.labels = labels
-        self.transform = transform
-
-    def preprocess_image(self, img_path):
-        # Cargar y convertir a escala de grises
-        img = cv2.imread(img_path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Filtro de mediana
-        gray = cv2.medianBlur(gray, 5)
-
-        # Binarización adaptativa
-        thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
-            cv2.THRESH_BINARY_INV, 15, 8
-        )
-
-        # Detección de contornos y recorte
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            x, y, w, h = cv2.boundingRect(max(contours, key=cv2.contourArea))
-            cropped = gray[y:y+h, x:x+w]
-        else:
-            cropped = gray
-
-        # Redimensionar a 512x512 y convertir a RGB
-        resized = cv2.resize(cropped, (512, 512))
-        rgb = cv2.cvtColor(resized, cv2.COLOR_GRAY2RGB)
-        return Image.fromarray(rgb)
-
-    def __getitem__(self, idx):
-        img = self.preprocess_image(self.image_paths[idx])
-        if self.transform:
-            img = self.transform(img)
-        label = torch.tensor(self.labels[idx], dtype=torch.float32)
-        return img, label
-
-    def __len__(self):
-        return len(self.image_paths)
-
+data_dir = "data"   # carpeta original con VERDE, ROJO, AMARILLO
+train_ratio = 0.8   # 80% train / 20% val
+batch_size = 8
+epochs = 10
 
 # =============================
-# 2. Modelo DenseNet
+# 2. Transformaciones
 # =============================
+transform = transforms.Compose([
+    transforms.Resize((512, 512)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5]*3, [0.5]*3)
+])
 
-def get_model():
-    model = models.densenet121(pretrained=True)  # DenseNet backbone
+# =============================
+# 3. Cargar dataset y dividirlo
+# =============================
+# Dataset completo
+full_dataset = datasets.ImageFolder(root=data_dir, transform=transform)
+
+# División train/val
+train_size = int(train_ratio * len(full_dataset))
+val_size = len(full_dataset) - train_size
+train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+print("Clases detectadas:", full_dataset.classes)
+print(f"Total imágenes: {len(full_dataset)} → Train: {len(train_dataset)}, Val: {len(val_dataset)}")
+
+# =============================
+# 4. Modelo DenseNet para clasificación
+# =============================
+def get_model(num_classes=3):
+    model = models.densenet121(pretrained=True)
     num_ftrs = model.classifier.in_features
     model.classifier = nn.Sequential(
-        nn.Linear(num_ftrs, 1000),
+        nn.Linear(num_ftrs, 512),
         nn.ReLU(),
-        nn.Linear(1000, 128),
-        nn.ReLU(),
-        nn.Linear(128, 1)  # salida regresión (score RCFT)
+        nn.Dropout(0.3),
+        nn.Linear(512, num_classes)  # 3 clases
     )
     return model
 
+device = torch.device("mps" if torch.backends.mps.is_available() else
+                      "cuda" if torch.cuda.is_available() else "cpu")
+
+model = get_model(num_classes=3).to(device)
 
 # =============================
-# 3. Entrenamiento
+# 5. Entrenamiento
 # =============================
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-def train_model(model, train_loader, val_loader, device, epochs=20):
-    criterion = nn.SmoothL1Loss()  # Huber loss
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-    model.to(device)
-
-    best_model_wts = None
-    best_val_loss = float("inf")
-
+def train_model(model, train_loader, val_loader, epochs=10):
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         for imgs, labels in train_loader:
-            imgs, labels = imgs.to(device), labels.to(device).unsqueeze(1)
-
+            imgs, labels = imgs.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(imgs)
             loss = criterion(outputs, labels)
@@ -105,55 +85,23 @@ def train_model(model, train_loader, val_loader, device, epochs=20):
 
         # Validación
         model.eval()
-        val_preds, val_true = [], []
+        correct, total = 0, 0
         with torch.no_grad():
             for imgs, labels in val_loader:
-                imgs, labels = imgs.to(device), labels.to(device).unsqueeze(1)
+                imgs, labels = imgs.to(device), labels.to(device)
                 outputs = model(imgs)
-                val_preds.extend(outputs.cpu().numpy())
-                val_true.extend(labels.cpu().numpy())
+                _, preds = torch.max(outputs, 1)
+                correct += (preds == labels).sum().item()
+                total += labels.size(0)
 
-        val_mae = mean_absolute_error(val_true, val_preds)
-        val_r2 = r2_score(val_true, val_preds)
-
-        print(f"Epoch {epoch+1}/{epochs} - Loss: {epoch_loss:.4f} - Val MAE: {val_mae:.3f} - R2: {val_r2:.3f}")
-
-        # Guardar mejor modelo
-        if val_mae < best_val_loss:
-            best_val_loss = val_mae
-            best_model_wts = model.state_dict()
-
-    if best_model_wts:
-        model.load_state_dict(best_model_wts)
+        acc = correct / total
+        print(f"Epoch {epoch+1}/{epochs} - Loss: {epoch_loss:.4f} - Val Acc: {acc:.3f}")
 
     return model
 
-
 # =============================
-# 4. Ejemplo de uso
+# 6. Ejecutar entrenamiento
 # =============================
-
-if __name__ == "__main__":
-    # Rutas de ejemplo (cámbialas a tu dataset real)
-    train_images = ["data/train/img1.png", "data/train/img2.png"]
-    train_labels = [28.0, 32.0]  # puntajes RCFT (0-36)
-    val_images = ["data/val/img3.png", "data/val/img4.png"]
-    val_labels = [12.0, 18.0]
-
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize([0.5]*3, [0.5]*3)
-    ])
-
-    train_dataset = RCFTDataset(train_images, train_labels, transform=transform)
-    val_dataset = RCFTDataset(val_images, val_labels, transform=transform)
-
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = get_model()
-    model = train_model(model, train_loader, val_loader, device, epochs=20)
-
-    torch.save(model.state_dict(), "rcft_model.pth")
-    print("Modelo guardado como rcft_model.pth")
+model = train_model(model, train_loader, val_loader, epochs=epochs)
+torch.save(model.state_dict(), "rcft_classifier.pth")
+print("Modelo guardado como rcft_classifier.pth")
