@@ -133,8 +133,8 @@ def main():
     # artifacts
     art_dir = os.path.join(BASE, "artifacts")
     os.makedirs(art_dir, exist_ok=True)
-    manifest_path = os.path.join(art_dir, "preprocess_manifest.csv")
-    labels_csv    = os.path.join(art_dir, "labels_from_manifest.csv")
+    manifest_path = os.path.join(art_dir, "preprocess_manifest_clean.csv")
+    labels_csv    = os.path.join(art_dir, "labels_from_manifest_clean.csv")
     write_header = not os.path.exists(manifest_path)
 
     videos = collect_labeled_videos(in_dir, args.labels)
@@ -142,7 +142,7 @@ def main():
         print("⚠️  No se encontraron videos en subcarpetas:", args.labels, "dentro de", in_dir)
         return
 
-    # acumularemos aquí para generar labels_from_manifest.csv
+    # acumularemos aquí para generar labels_from_manifest_clean.csv
     label_rows = []
 
     with open(manifest_path, "a", newline="", encoding="utf-8") as f:
@@ -198,7 +198,7 @@ def main():
             w.writerow(["video_id_norm", "label"])
             for vid_norm, lab in sorted(dedup.items()):
                 w.writerow([vid_norm, lab])
-        print(f"[OK] labels_from_manifest.csv -> {labels_csv}")
+        print(f"[OK] labels_from_manifest_clean.csv -> {labels_csv}")
 
     print(f"[OK] Manifest -> {manifest_path}")
     print("🎯 Listo. Salidas en:", out_dir)

@@ -18,7 +18,7 @@ DATA_DIR  = os.path.join(BASE_PATH, "datasets", "kp_v1")
 
 RECON_CSV   = os.path.join(ART_DIR, "reconstruction_by_video_hand.csv")   # p95 por video/hand
 EMB_WIN_CSV = os.path.join(ART_DIR, "kmeans_window_assignments.csv")      # cluster por ventana
-MANIFEST    = os.path.join(DATA_DIR, "_manifest.csv")                     # miss_% y paths
+MANIFEST    = os.path.join(DATA_DIR, "_manifest_clean.csv")                     # miss_% y paths
 
 LABELS_DIR  = os.path.join(BASE_PATH, "labels")  # subcarpetas rojo/amarillo/verde
 MODEL_OUT   = os.path.join(ART_DIR, "video_quality_clf.joblib")
@@ -125,7 +125,7 @@ def load_signal_features(recon_csv: str, manifest_csv: str) -> pd.DataFrame:
     # manifest para miss_% y meta
     man = pd.read_csv(manifest_csv)
     if "video" not in man.columns:
-        raise RuntimeError("_manifest.csv debe tener columna 'video'.")
+        raise RuntimeError("_manifest_clean.csv debe tener columna 'video'.")
     man["video_id_norm"] = man["video"].apply(normalize_id)
 
     keep = ["video_id_norm", "miss_left_pct", "miss_right_pct", "frames", "fps"]

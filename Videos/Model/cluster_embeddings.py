@@ -6,14 +6,14 @@ from sklearn.metrics import silhouette_score
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 EMB_CSV   = os.path.join(BASE_PATH, "artifacts", "window_embeddings.csv")
-MANIFEST  = os.path.join(BASE_PATH, "datasets", "kp_v1", "_manifest.csv")
+MANIFEST  = os.path.join(BASE_PATH, "datasets", "kp_v1", "_manifest_clean.csv")
 OUT_DIR   = os.path.join(BASE_PATH, "artifacts")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # ------------- carga -------------
-emb = pd.read_csv(EMB_CSV)  # cols: split, video_id, hand, z0..z63
+emb = pd.read_csv(EMB_CSV)
 z_cols = [c for c in emb.columns if c.startswith("z")]
-Z = emb[z_cols].values
+Z = emb[z_cols].astype(np.float32).values  # <- forzar float32
 
 # ------------- KMeans -------------
 k = 3
@@ -62,3 +62,7 @@ print(f"[OK] resumen por video -> {os.path.relpath(out_csv, BASE_PATH)}")
 win_out = os.path.join(OUT_DIR, "kmeans_window_assignments.csv")
 emb.to_csv(win_out, index=False)
 print(f"[OK] asignaciones por ventana -> {os.path.relpath(win_out, BASE_PATH)}")
+# Guardar el modelo KMeans para usar en inferencia
+import joblib
+joblib.dump(km, os.path.join(OUT_DIR, "kmeans_model.joblib"))
+print(f"[OK] kmeans model -> {os.path.join(OUT_DIR, 'kmeans_model.joblib')}")

@@ -9,7 +9,7 @@ import torch.nn as nn
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ART_DIR = os.path.join(BASE_PATH, "artifacts")
 CKPT    = os.path.join(ART_DIR, "autoencoder_temporal.pt")
-MANIFEST= os.path.join(BASE_PATH, "datasets", "kp_v1", "_manifest.csv")
+MANIFEST= os.path.join(BASE_PATH, "datasets", "kp_v1", "_manifest_clean.csv")
 
 # Deben coincidir con train_video_model.py
 FEATS_PER_FRAME = 63
