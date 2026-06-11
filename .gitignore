@@ -1,11 +1,73 @@
-/Videos/processed-videos/
-/Videos/training-videos/
-/venv/
-.venv
-training-videos/
-reports
-labels
-processed-videos/
-datasets/
+# ──────────────────────────────────────────────
+#  Python
+# ──────────────────────────────────────────────
 __pycache__/
-augmented-videos/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# ──────────────────────────────────────────────
+#  IDE / Editor
+# ──────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# ──────────────────────────────────────────────
+#  OS artifacts
+# ──────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+Desktop.ini
+*.lnk
+
+# ──────────────────────────────────────────────
+#  Videos & media (too large for Git)
+# ──────────────────────────────────────────────
+*.mp4
+*.mov
+*.MOV
+*.avi
+*.mkv
+*.wmv
+
+# ──────────────────────────────────────────────
+#  Data directories (local only)
+# ──────────────────────────────────────────────
+data/
+datasets/
+labels/
+
+# ──────────────────────────────────────────────
+#  Generated artifacts & model outputs
+# ──────────────────────────────────────────────
+artifacts/
+reports/
+*.joblib
+*.pt
+*.pkl
+*.h5
+
+# ──────────────────────────────────────────────
+#  Legacy Videos/ directory (code moved to src/)
+# ──────────────────────────────────────────────
+Videos/
+
+# ──────────────────────────────────────────────
+#  Misc
+# ──────────────────────────────────────────────
+*.bak
+*.log
+*.tmp
